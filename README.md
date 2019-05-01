@@ -3,7 +3,9 @@ Retrieves content from abitrary websites and fills it into the provided JSON int
 
 ## Dependencies
 - `python3.6+`
+- `requests`: Install with `python3 -m pip install --user requests`
 - `pyppeteer`: Install with `python3 -m pip install --user pyppeteer `
+- `docker` (Or `node, npm, express and postlight/mercury-parser`)
 
   On linux, executing might cause an error: `No usable sandbox!`. To solve [configure a sandbox](https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#setting-up-chrome-linux-sandbox):
   ```
