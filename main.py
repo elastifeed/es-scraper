@@ -5,11 +5,11 @@ from crawler import Crawler
 from renderer import *
 
 async def main():
-    connection = "http://localhost:8080/parse"
+    connection = "http://localhost:8080/parse/html"
     crawler = Crawler(connection, None)
     browser = await launch()
     page = await browser.newPage()
-    test_url="https://news.yahoo.com/kremlin-says-north-korean-leader-kim-meet-putin-001907238.html"
+    test_url="https://www.golem.de/news/precision-dell-bringt-guenstige-whiskey-lake-workstations-mit-ubuntu-1905-140989.html"
 
     page.on("dialog", lambda dialog: asyncio.ensure_future(dismiss_dialog(dialog)))
 
@@ -20,7 +20,7 @@ async def main():
 
     await asyncio.gather(screenshot(page, "test.png"), renderPdf(page, "test.pdf")
                          , crawler.crawl(page))
-    print(json.dumps(crawler.getResult()))
+    print(json.dumps(crawler.getResult(), sort_keys=True, indent=4))
 
     await browser.close()
 
