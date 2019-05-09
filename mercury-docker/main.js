@@ -8,6 +8,7 @@ app.use(express.json({limit : '100mb'}));
 // React to post on /parse/url
 app.post("/parse/url", async function(req, res) {
     const data = req.body;
+    console.log(data)
 
     if (!data.url) {
         return res.status(400).send({
@@ -17,7 +18,7 @@ app.post("/parse/url", async function(req, res) {
     }
 
     console.log(`Parsing from url: ${data.url}`)
-    return res.json(await Mercury.parse(data.url, {headers : header}))
+    return res.json(await Mercury.parse(data.url, {headers : header, contentType : 'markdown'}))
 
 });
 
@@ -25,14 +26,14 @@ app.post("/parse/url", async function(req, res) {
 app.post("/parse/html", async function(req, res) {
     const data = req.body;
 
-    if (!data.url && !data.html) {
+    if (!data.url || !data.html) {
         return res.status(400).send({
             error: 1,
             message: "Invalid JSON object"
         });
     }
     console.log(`Parsing from html: ${data.url}`)
-    res.json(await Mercury.parse(data.url, {headers : header, contentType : 'text', html : data.html}))
+    res.json(await Mercury.parse(data.url, {headers : header, contentType : 'markdown', html : data.html}))
 });
 
 app.listen(8080);

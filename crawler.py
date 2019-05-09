@@ -34,20 +34,12 @@ class Crawler:
         crawl_result.update({'content': await self.__check_crawl(p, crawl_result)})
         self.result = self.__parse(crawl_result)
 
-    async def crawlCategory(self, p : page):
-        pass # @TODO Retrieve the category. Consider using machine learning trained on https://data.world/crowdflower/url-categorization?
-
     def getResult(self):
         return self.result
 
     def __parse(self, answer):
         """ Takes an parsed object and removes/adds field so that it matches the required specification. """
-        to_clean = ('lead_image_url', 'dek', 'next_page_url'
-                    , 'domain', 'word_count', 'direction', 'total_pages'
-                    , 'rendered_pages') # These are not needed? @TODO discuss with group!
         additional = {'Created': None, 'IsFromFeed': False, 'FeedUrl': None}
-        for k in to_clean:
-            answer.pop(k, None)
         answer.update(additional)
 
         return answer
