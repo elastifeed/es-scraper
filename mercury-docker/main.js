@@ -18,7 +18,7 @@ app.post("/parse/url", async function(req, res) {
     }
 
     console.log(`Parsing from url: ${data.url}`)
-    return res.json(await Mercury.parse(data.url, {headers : header, contentType : 'markdown'}))
+    res.json(await Mercury.parse(data.url, {headers : header, contentType : 'markdown'}))
 
 });
 
@@ -33,7 +33,9 @@ app.post("/parse/html", async function(req, res) {
         });
     }
     console.log(`Parsing from html: ${data.url}`)
-    res.json(await Mercury.parse(data.url, {headers : header, contentType : 'markdown', html : data.html}))
+    let test = await Mercury.parse(data.url, {headers : header, contentType : 'markdown', html : data.html})
+    console.log(test.content)
+    res.json(test)
 });
 
 app.listen(8080);

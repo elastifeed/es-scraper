@@ -20,15 +20,14 @@ class Crawler:
             r.raise_for_status()
         except requests.exceptions.HTTPError as httperr:
             print("HTTP Error: ", httperr)
-            return crawl_result # Return error loaded json
+            self.result = crawl_result
+            return 
         except requests.exceptions.Timeout as timeouterr:
-            return {'error':2, 'message': timeouterr}
+            self.result = {'error':2, 'message': timeouterr}
+            return
         except requests.exceptions.RequestException as fatal:
             print(fatal)
             sys.exit(1)
-
-        # Category needs to be retrieved seperatly
-        crawl_result.update({'Category': await self.crawlCategory(p)})
 
         # Try to check the quality of the crawl.
         crawl_result.update({'content': await self.__check_crawl(p, crawl_result)})
