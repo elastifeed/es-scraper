@@ -17,7 +17,7 @@ Retrieves content from abitrary websites and fills it into the provided JSON int
     # export CHROME_DEVEL_SANDBOX env variable
     export CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox
   ```
-or
-```bash
-    sudo sysctl -w kernel.unprivileged_userns_clone=1
-```
+  or
+  ```bash
+      sudo sysctl -w kernel.unprivileged_userns_clone=1
+  ```
