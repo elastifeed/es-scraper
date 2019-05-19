@@ -1,5 +1,6 @@
 import asyncio
 from pyppeteer import page
+from sanic.log import logger
 
 async def screenshot(p : page, savePath):
     await p.setViewport({'width':700, 'height':900, 'isMobile':True})

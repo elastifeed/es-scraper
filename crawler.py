@@ -3,6 +3,7 @@ import asyncio
 import json
 import requests
 from pyppeteer import page
+from sanic.log import logger
 
 class Crawler:
     def __init__(self, connection, options):
@@ -37,14 +38,17 @@ class Crawler:
         return self.result
 
     def __parse(self, answer):
-        """ Takes an parsed object and removes/adds field so that it matches the required specification. """
+        """ Takes an parsed object and removes/adds field so that it matches the required specification.
+        Additionally unescapes any text. """
+        #answer.update({'content': answer['content'].encode("utf-8").decode("utf-8")})
+
         additional = {'Created': None, 'IsFromFeed': False, 'FeedUrl': None}
         answer.update(additional)
 
         return answer
 
     async def __check_crawl(self, p : page, crawl_result):
-        """ Tries to assert on the quality of the crawl. It is possible that the mercury api was unsuccesful.
+        """ Tries to assert on the quality of the crawl. It is possible that the mercury api was unsuccessful.
         If that is the case, we should try crawling manually again.
         :param p: the page that might have to be re-crawled
         :param crawl_result: the result of the first crawl
