@@ -7,9 +7,7 @@ RUN apk add --update \
 
 COPY main.js .
 COPY package.json .
-RUN npm install jquery
-RUN npm install @postlight/mercury-parser
-RUN npm install express
+RUN npm install
 
 ENTRYPOINT ["/usr/bin/node", "./main.js"]
 
