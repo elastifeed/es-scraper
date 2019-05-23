@@ -22,10 +22,14 @@ async def scrape(request):
     """
     logger.info(request.endpoint + " : " + str(request.json))
 
-    #    test_url = 'https://www.golem.de/news/logistik-amazon-nutzt-in-europa-tagsueber-frachtflugzeuge-1905-141293.html'
+    try:
+        url = request.json['url']
+    except KeyError:
+        abort(500)
+    )
 
-   # await asyncio.gather(screenshot(page, "test.png"), renderPdf(page, "test.pdf")
-   #                      , crawler.crawl(page))
+ await asyncio.gather(screenshot(page, "test.png"), renderPdf(page, "test.pdf")
+                        , crawler.crawl(page))
 
 
     return  # TODO Full content
@@ -37,7 +41,7 @@ async def content(request):
     logger.info(request.endpoint + " : " + str(request.json))
     try:
         return json_resp(await Retrieval.get_content(request.json["url"]))
-    except RetrievalException:
+    except ( RetrievalException, KeyError ):
         return abort(500)
 
 
@@ -52,7 +56,7 @@ async def thumbnail(request):
                 f"/tmp/test.png"
                 )
             )
-    except RetrievalException:
+    except ( RetrievalException, KeyError):
         return abort(500)
 
 
@@ -66,7 +70,7 @@ async def render(request):
                 f"/tmp/test.pdf"
                 )
             )
-    except RetrievalException:
+    except ( RetrievalException, KeyError):
         return abort(500)
 
 
