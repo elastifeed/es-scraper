@@ -23,13 +23,30 @@ async def scrape(request):
     logger.info(request.endpoint + " : " + str(request.json))
 
     try:
-        url = request.json['url']
-    except KeyError:
-        abort(500)
-    )
+        url = request.json["url"]
 
- await asyncio.gather(screenshot(page, "test.png"), renderPdf(page, "test.pdf")
-                        , crawler.crawl(page))
+        content = await Retrieval.get_content(url)
+        thumbnail_path = await Retrieval.get_thumbnail(url)
+        pdf_path = await Retrieval.get_pdf(url)
+
+        return json_resp({
+            "content": content,
+            "thumbnail_path": thumbnail_path,
+            "pdf_path": pdf_path
+        })
+
+    except Exception as e:
+        logger.exception(e)
+        return json_resp({}, status=406)
+
+    # try:
+    #     url = request.json['url']
+    # except KeyError:
+    #     abort(500)
+    # )
+
+    # await asyncio.gather(screenshot(page, "test.png"), renderPdf(page, "test.pdf")
+    #                   , crawler.crawl(page))
 
 
     return  # TODO Full content
@@ -41,8 +58,8 @@ async def content(request):
     logger.info(request.endpoint + " : " + str(request.json))
     try:
         return json_resp(await Retrieval.get_content(request.json["url"]))
-    except ( RetrievalException, KeyError ):
-        return abort(500)
+    except (RetrievalException, KeyError):
+        return json_resp({}, status=406)
 
 
 @app.route("/scrape/thumbnail", methods=['POST'])
@@ -57,7 +74,7 @@ async def thumbnail(request):
                 )
             )
     except ( RetrievalException, KeyError):
-        return abort(500)
+        return json_resp({}, status=406)
 
 
 @app.route("/scrape/pdf", methods=['POST'])
@@ -71,7 +88,7 @@ async def render(request):
                 )
             )
     except ( RetrievalException, KeyError):
-        return abort(500)
+        return json_resp({}, status=406)
 
 
 @app.listener("before_server_start")

@@ -1,11 +1,12 @@
 import asyncio
+from uuid import uuid4
 from crawler import Crawler
-from sanic.log import logger
 from pyppeteer import launch
 from pyppeteer.browser import Browser
-from pyppeteer.page import Page
 from pyppeteer.errors import NetworkError
+from pyppeteer.page import Page
 from renderer import screenshot, renderPdf
+from sanic.log import logger
 
 class RetrievalException(Exception):
     pass
@@ -52,7 +53,7 @@ class Retrieval:
 
     @staticmethod
     async def get_content(url):
-        connection = "http://localhost:8080/parse/html"  # @TODO Extract this to a router?
+        connection = "http://localhost:8080/mercury/html"  # @TODO Extract this to a router?
         try:  # Assert that we have the necessary information to proccess the request
             page = await Retrieval._load(url)
         except AttributeError as e:
@@ -70,10 +71,12 @@ class Retrieval:
         return crawler.getResult()
 
     @staticmethod
-    async def get_thumbnail(url, path):
+    async def get_thumbnail(url, path=None):
+        path = path or f"/tmp/{uuid4()}.png"
         try:  # Assert that we have the necessary information to proccess the request
             page = await Retrieval._load(url)
             await screenshot(page, path)
+            return path
         except AttributeError as e:
             logger.exception(e)
             raise RetrievalException(e)
@@ -82,10 +85,12 @@ class Retrieval:
             raise RetrievalException(e)
 
     @staticmethod
-    async def get_pdf(url, path):
+    async def get_pdf(url, path=None):
+        path = path or f"/tmp/{uuid4()}.pdf"
         try:  # Assert that we have the necessary information to proccess the request
             page = await Retrieval._load(url)
             await renderPdf(page, path)
+            return path
         except AttributeError as e:
             logger.exception(e)
             raise RetrievalException(e)
