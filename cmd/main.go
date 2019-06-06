@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/mmmoa/es-scraper/internal/api"
-	"github.com/mmmoa/es-scraper/internal/cdp"
+	"github.com/elastifeed/es-scraper/internal/api"
+	"github.com/elastifeed/es-scraper/internal/cdp"
 )
 
 /*
