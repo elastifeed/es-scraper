@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/elastifeed/es-scraper/internal/api"
 	"github.com/elastifeed/es-scraper/internal/cdp"
 )
@@ -34,10 +34,10 @@ func main() {
 
 	go func() { // Run the server in a non - blocking goroutine
 		if err := server.ListenAndServe(); err != nil {
-			glog.Fatal(err)
+			log.Fatal(err)
 		}
 	}()
-	glog.Info("Set up endpoint on", os.Getenv("API_BIND_SCRAPE"))
+	log.Print("Set up endpoint on", os.Getenv("API_BIND_SCRAPE"))
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c)

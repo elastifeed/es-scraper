@@ -1,34 +1,68 @@
 package cdp
 
 import (
-	"io/ioutil"
+	"context"
 
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
-	"github.com/golang/glog"
+	"github.com/elastifeed/es-scraper/internal/storage"
 )
 
-func Screenshot(url string) {
+var pdfSaver = storage.New("pdf")
+var thumbnailSaver = storage.New("png")
+
+// Screenshot takes an url and renders that url for use as a thumbnail.
+func Screenshot(url string) (string, error) {
 	var result []byte
+
 	tasks := chromedp.Tasks{
 		chromedp.CaptureScreenshot(&result),
 	}
-	ExecuteOnPage(url, tasks)
-	if err := saveFile(&result); err != nil {
-		glog.Fatal(err)
+	if err := ExecuteOnPage(url, tasks); err != nil {
+		return "", err
 	}
+	savePath, saverr := thumbnailSaver.InFolderOf(url).Save(&result)
+	if saverr != nil {
+		return "", saverr
+	}
+
+	return savePath, nil
+
 }
 
-func pdf(result *[]byte, url string) {
-	// @TODO
+// Pdf thakes an url and renders it as a pdf file.
+func Pdf(url string) (string, error) {
+	var result []byte
+
+	tasks := chromedp.Tasks{
+		//chromedp.WaitVisible("body"),
+		pdfAction(&result),
+	}
+	if err := ExecuteOnPage(url, tasks); err != nil {
+		return "", err
+	}
+	savePath, saverr := pdfSaver.InFolderOf(url).Save(&result)
+	if saverr != nil {
+		return "", saverr
+	}
+
+	return savePath, nil
 }
 
 func content(result *[]byte, url string) {
 	// @TODO
 }
 
-// Saves the given data to the disk.
-func saveFile(data *[]byte) error {
-	return ioutil.WriteFile(makeFilename(), *data, 0644)
-}
+/*
+	pdfAction returns a runnable chromedp.Action that renders the current context as a pdf file.
+	The results are saved to the resultBuf
+*/
+func pdfAction(resultBuf *[]byte) chromedp.Action {
+	// Use a chromedp.ActionFunc to build an executable function
+	return chromedp.ActionFunc(func(ctx context.Context) error { // The context is set when Run calls Do for each each Action
+		var err error
+		*resultBuf, err = page.PrintToPDF().WithLandscape(true).Do(ctx)
+		return err
 
-func makeFilename() string { return "/tmp/chromedp_test.png" }
+	})
+}
