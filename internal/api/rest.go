@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/elastifeed/es-scraper/internal/cdp"
@@ -54,6 +55,7 @@ func thumbnailHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(*responseError(err))
 		return
 	}
+	log.Print("Screenshotted:", filePath)
 
 	w.WriteHeader(http.StatusOK)
 	resp := fmt.Sprintf("{\"thumbnail_path\" : \"%s\"}", filePath)
@@ -63,7 +65,7 @@ func thumbnailHandler(w http.ResponseWriter, r *http.Request) {
 
 func pdfHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	url, err := decodeRequest(r) // Decode the incoming
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

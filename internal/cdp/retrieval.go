@@ -2,6 +2,7 @@ package cdp
 
 import (
 	"context"
+	"log"
 
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -15,8 +16,10 @@ var thumbnailSaver = storage.New("png")
 func Screenshot(url string) (string, error) {
 	var result []byte
 
+	log.Print("Test")
+
 	tasks := chromedp.Tasks{
-		chromedp.CaptureScreenshot(&result),
+		screenshotAction(&result),
 	}
 	if err := ExecuteOnPage(url, tasks); err != nil {
 		return "", err
@@ -51,6 +54,23 @@ func Pdf(url string) (string, error) {
 
 func content(result *[]byte, url string) {
 	// @TODO
+}
+
+func screenshotAction(resultBuf *[]byte) chromedp.Action {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		log.Print("Executing screenshot")
+		viewport := page.Viewport{
+			X:      0,
+			Y:      0,
+			Width:  1024,
+			Height: 1024,
+			Scale:  1,
+		}
+		var err error
+		*resultBuf, err = page.CaptureScreenshot().WithClip(&viewport).Do(ctx)
+		log.Print("... done.")
+		return err
+	})
 }
 
 /*
