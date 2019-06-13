@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/elastifeed/es-scraper/internal/cdp"
@@ -20,8 +19,7 @@ func InitRouter() *mux.Router {
 	base := r.PathPrefix("/scrape").Methods("POST").Subrouter()
 	// Define all the routes
 	base.HandleFunc("/", allHandler)
-	base.HandleFunc("/content", contentHandler)
-	base.HandleFunc("/thumbnail", thumbnailHandler)
+	base.HandleFunc("/screenshot", screenshotHandler)
 	base.HandleFunc("/pdf", pdfHandler)
 
 	// Return the initialized router to the caller
@@ -39,7 +37,7 @@ func contentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func thumbnailHandler(w http.ResponseWriter, r *http.Request) {
+func screenshotHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	url, err := decodeRequest(r) // Decode the incoming
@@ -55,7 +53,6 @@ func thumbnailHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(*responseError(err))
 		return
 	}
-	log.Print("Screenshotted:", filePath)
 
 	w.WriteHeader(http.StatusOK)
 	resp := fmt.Sprintf("{\"thumbnail_path\" : \"%s\"}", filePath)
