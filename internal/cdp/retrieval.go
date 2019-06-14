@@ -16,8 +16,6 @@ var thumbnailSaver = storage.New("png")
 func Screenshot(url string) (string, error) {
 	var result []byte
 
-	log.Print("Test")
-
 	tasks := chromedp.Tasks{
 		screenshotAction(&result),
 	}
@@ -38,7 +36,7 @@ func Pdf(url string) (string, error) {
 	var result []byte
 
 	tasks := chromedp.Tasks{
-		//chromedp.WaitVisible("body"),
+		//chromedp.WaitReady("#document"),
 		pdfAction(&result),
 	}
 	if err := ExecuteOnPage(url, tasks); err != nil {
@@ -52,13 +50,14 @@ func Pdf(url string) (string, error) {
 	return savePath, nil
 }
 
-func content(result *[]byte, url string) {
-	// @TODO
+// Scrape performs a full content retrieval and render on the page and returns !!@TODO!!
+func Scrape(url string) {
+	var screenshotBuf, pdfBuf, thumbnailBuf []byte
 }
 
 func screenshotAction(resultBuf *[]byte) chromedp.Action {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
-		log.Print("Executing screenshot")
+		log.Print("Taking screenshot...")
 		viewport := page.Viewport{
 			X:      0,
 			Y:      0,
@@ -68,7 +67,7 @@ func screenshotAction(resultBuf *[]byte) chromedp.Action {
 		}
 		var err error
 		*resultBuf, err = page.CaptureScreenshot().WithClip(&viewport).Do(ctx)
-		log.Print("... done.")
+		log.Print("... screenshot done.")
 		return err
 	})
 }
@@ -80,8 +79,10 @@ func screenshotAction(resultBuf *[]byte) chromedp.Action {
 func pdfAction(resultBuf *[]byte) chromedp.Action {
 	// Use a chromedp.ActionFunc to build an executable function
 	return chromedp.ActionFunc(func(ctx context.Context) error { // The context is set when Run calls Do for each each Action
+		log.Print("Rendering pdf...")
 		var err error
 		*resultBuf, err = page.PrintToPDF().WithLandscape(true).Do(ctx)
+		log.Print("... pdf done.")
 		return err
 
 	})
