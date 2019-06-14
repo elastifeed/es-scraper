@@ -3,6 +3,7 @@ module github.com/elastifeed/es-scraper
 go 1.12
 
 require (
+	github.com/aws/aws-sdk-go v1.19.49
 	github.com/chromedp/cdproto v0.0.0-20190429085128-1aa4f57ff2a9
 	github.com/chromedp/chromedp v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
