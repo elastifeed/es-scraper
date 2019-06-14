@@ -43,6 +43,7 @@ func main() {
 		Bucket: aws.String("hellofromgolang"),
 		Key:    aws.String("testkey"),
 		Body:   strings.NewReader("Is this working? :-)"),
+		ACL:    aws.String("public-read"),
 	})
 
 	if err != nil {
@@ -60,4 +61,5 @@ func main() {
 
 	b, _ := ioutil.ReadAll(data.Body)
 	fmt.Println(string(b))
+
 }
