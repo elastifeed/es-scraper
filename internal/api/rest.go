@@ -7,12 +7,20 @@ import (
 	"net/http"
 
 	"github.com/elastifeed/es-scraper/internal/cdp"
+	"github.com/elastifeed/es-scraper/internal/storage"
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 )
 
+var (
+	store storage.Storager
+)
+
 // InitRouter initializes the router and defines routes.
-func InitRouter() *mux.Router {
+// @TODO improve handling the storage interface, there can only be one at the moment
+func InitRouter(s storage.Storager) *mux.Router {
+	store = s
+
 	r := mux.NewRouter()
 
 	// Grab a subrouter for the route "/scrape"
@@ -47,7 +55,7 @@ func screenshotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := cdp.Screenshot(url) // Take the screenshot
+	filePath, err := cdp.Screenshot(url, store) // Take the screenshot
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(*responseError(err))
@@ -70,7 +78,7 @@ func pdfHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := cdp.Pdf(url) // Render the Pdf
+	filePath, err := cdp.Pdf(url, store) // Render the Pdf
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(*responseError(err))

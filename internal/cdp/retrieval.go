@@ -9,11 +9,8 @@ import (
 	"github.com/elastifeed/es-scraper/internal/storage"
 )
 
-var pdfSaver = storage.New("pdf")
-var thumbnailSaver = storage.New("png")
-
 // Screenshot takes an url and renders that url for use as a thumbnail.
-func Screenshot(url string) (string, error) {
+func Screenshot(url string, s storage.Storager) (string, error) {
 	var result []byte
 
 	tasks := chromedp.Tasks{
@@ -22,17 +19,17 @@ func Screenshot(url string) (string, error) {
 	if err := ExecuteOnPage(url, tasks); err != nil {
 		return "", err
 	}
-	savePath, saverr := thumbnailSaver.InFolderOf(url).Save(&result)
-	if saverr != nil {
-		return "", saverr
+	saveURL, err := s.Upload(result, ".png")
+	if err != nil {
+		return "", err
 	}
 
-	return savePath, nil
+	return saveURL, nil
 
 }
 
 // Pdf thakes an url and renders it as a pdf file.
-func Pdf(url string) (string, error) {
+func Pdf(url string, s storage.Storager) (string, error) {
 	var result []byte
 
 	tasks := chromedp.Tasks{
@@ -42,7 +39,7 @@ func Pdf(url string) (string, error) {
 	if err := ExecuteOnPage(url, tasks); err != nil {
 		return "", err
 	}
-	savePath, saverr := pdfSaver.InFolderOf(url).Save(&result)
+	savePath, saverr := s.Upload(result, ".pdf")
 	if saverr != nil {
 		return "", saverr
 	}
@@ -52,7 +49,7 @@ func Pdf(url string) (string, error) {
 
 // Scrape performs a full content retrieval and render on the page and returns !!@TODO!!
 func Scrape(url string) {
-	var screenshotBuf, pdfBuf, thumbnailBuf []byte
+	// var screenshotBuf, pdfBuf, thumbnailBuf []byte
 }
 
 func screenshotAction(resultBuf *[]byte) chromedp.Action {

@@ -9,8 +9,11 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/elastifeed/es-scraper/internal/api"
 	"github.com/elastifeed/es-scraper/internal/cdp"
+	"github.com/elastifeed/es-scraper/internal/storage"
 )
 
 /*
@@ -20,7 +23,22 @@ import (
 */
 func main() {
 	flag.Parse()
-	r := api.InitRouter()
+
+	// Initiate storage backend
+	s, err := storage.NewS3(&aws.Config{
+		// @TODO get credentials and endpoint from environment, these are just test credentials :-P
+		Credentials:      credentials.NewStaticCredentials("K279UGQBCW1RM3G1IITH", "s11DBCiqv9hnqoJ9drpEAQJkkBO2EP0Gv7u6MgLf", ""),
+		Endpoint:         aws.String("http://localhost:30098"),
+		Region:           aws.String("us-east-1"), // Somehow this is needed
+		DisableSSL:       aws.Bool(false),
+		S3ForcePathStyle: aws.Bool(true),
+	}, "elastitest", "http://localhost:30098/")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r := api.InitRouter(s)
 
 	server := &http.Server{
 		Handler:      r,
