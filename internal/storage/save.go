@@ -1,10 +1,10 @@
 package storage
 
 import (
-	"path/filepath"
-	"os"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 )
@@ -16,7 +16,7 @@ type FileSaveParams struct {
 	folder   uuid.UUID // The deepest level folder, described by a version 5 uuid
 }
 
-// New creates a new save struct 
+// New creates a new save struct
 func New(fType string) FileSaveParams {
 	return FileSaveParams{fileType: fType, path: "/tmp", folder: uuid.New()}
 }
@@ -39,7 +39,7 @@ func (p *FileSaveParams) Save(data *[]byte) (string, error) {
 // Builds an absolute path to which a file can be saved
 func (p *FileSaveParams) makeFilename() string {
 	dir := filepath.Join(p.path, p.folder.String())
-	_ = os.MkdirAll(dir, os.ModeDir | 0700) // Ensure the dir exsits
+	_ = os.MkdirAll(dir, os.ModeDir|0700) // Ensure the dir exsits
 	// <basePath>/<unique folder based on url>/<filetype>.<filetype>
 	return fmt.Sprintf("%s/%s.%s", dir, p.fileType, p.fileType)
 }

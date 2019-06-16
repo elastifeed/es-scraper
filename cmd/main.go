@@ -48,5 +48,4 @@ func main() {
 	<-c // Block until we recieve a signal on c
 
 	server.Shutdown(context) // Shutdown the server gracefully.
-
 }

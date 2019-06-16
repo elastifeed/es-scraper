@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/elastifeed/es-scraper/internal/cdp"
-	"github.com/golang/glog"
+	"github.com/elastifeed/es-scraper/internal/cdptab"
 	"github.com/gorilla/mux"
 )
 
@@ -15,30 +16,24 @@ import (
 func InitRouter() *mux.Router {
 	r := mux.NewRouter()
 
-	// Grab a subrouter for the route "/scrape"
-	base := r.PathPrefix("/scrape").Methods("POST").Subrouter()
-	// Define all the routes
-	base.HandleFunc("/", allHandler)
-	base.HandleFunc("/screenshot", screenshotHandler)
-	base.HandleFunc("/pdf", pdfHandler)
+	// Register parametrised route
+	r.HandleFunc("/scrape/{action}", handler).Methods("POST")
 
 	// Return the initialized router to the caller
 	return r
 }
 
-func allHandler(w http.ResponseWriter, r *http.Request) {
-	glog.Info(r)
+func handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-}
 
-func contentHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-}
+	vars := mux.Vars(r)
+	action := vars["action"]
 
-func screenshotHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	if !isValidAction(action) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(*responseError(errors.New("Path not found")))
+		return
+	}
 
 	url, err := decodeRequest(r) // Decode the incoming
 	if err != nil {
@@ -47,39 +42,34 @@ func screenshotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := cdp.Screenshot(url) // Take the screenshot
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(*responseError(err))
-		return
+	callback := func(result cdptab.ChromeTabReturns) {
+		if result.Err != nil {
+			log.Print(result.Err)
+			//w.WriteHeader(http.StatusBadRequest)
+			w.Write(*responseError(result.Err))
+			return
+		}
+
+		data, err := json.Marshal(result.Data)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(*responseError(err))
+			return
+		}
+		log.Printf("Got result %s", data)
+
+		w.Write(data)
 	}
 
-	w.WriteHeader(http.StatusOK)
-	resp := fmt.Sprintf("{\"thumbnail_path\" : \"%s\"}", filePath)
-	w.Write([]byte(resp))
-
+	cdp.Enqueue(action, url, callback)
 }
 
-func pdfHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	url, err := decodeRequest(r) // Decode the incoming
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(*responseError(err))
-		return
+func isValidAction(action string) bool {
+	switch action {
+	case "all", "screenshot", "pdf", "content":
+		return true
 	}
-
-	filePath, err := cdp.Pdf(url) // Render the Pdf
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(*responseError(err))
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	resp := fmt.Sprintf("{\"pdf_path\" : \"%s\"}", filePath)
-	w.Write([]byte(resp))
+	return false
 }
 
 func decodeRequest(r *http.Request) (string, error) {
