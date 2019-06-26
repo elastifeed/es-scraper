@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	// Initiate storage backend
-	s, err := storage.NewS3(&aws.Config{
+	store, err := storage.NewS3(&aws.Config{
 		// @TODO get credentials and endpoint from environment, these are just test credentials :-P
 		Credentials:      credentials.NewStaticCredentials("K279UGQBCW1RM3G1IITH", "s11DBCiqv9hnqoJ9drpEAQJkkBO2EP0Gv7u6MgLf", ""),
 		Endpoint:         aws.String("http://localhost:30098"),
@@ -38,7 +38,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := api.InitRouter(s)
+	r := api.InitRouter()
 
 	server := &http.Server{
 		Handler:      r,
@@ -47,8 +47,8 @@ func main() {
 		ReadTimeout:  30 * time.Second,
 	}
 
-	ctx, cancel := cdp.Launch() // Start a new headless chrome browser
-	defer cancel()              // Defer closing the browser until main ends.
+	ctx, cancel := cdp.Launch(store) // Start a new headless chrome browser with s3 storage
+	defer cancel()                   // Defer closing the browser until main ends.
 
 	go func() { // Run the server in a non - blocking goroutine
 		if err := server.ListenAndServe(); err != nil {
@@ -66,5 +66,4 @@ func main() {
 	<-c // Block until we recieve a signal on c
 
 	server.Shutdown(context) // Shutdown the server gracefully.
-
 }
