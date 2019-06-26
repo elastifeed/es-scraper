@@ -24,7 +24,7 @@ func Launch(store storage.Storager) (context.Context, context.CancelFunc) {
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.UserAgent(userAgent),
-		// chromedp.Headless, // for debugging uncomment to see a browser window
+		chromedp.Headless,
 	}
 	// Allocate the basis for a browser.
 	allocctx, ccl := chromedp.NewExecAllocator(context.Background(), launchOpts...)
