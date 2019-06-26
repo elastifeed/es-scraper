@@ -10,13 +10,13 @@ import (
 type task struct {
 	Action   string
 	URL      string
-	Callback func(cdptab.ChromeTabReturns)
+	Callback chan cdptab.ChromeTabReturns 
 }
 
 var queue chan task
 
 // Enqueue adds a task to the task queue which will then be run when a worker is free and a tab is ready.
-func Enqueue(action, url string, callback func(cdptab.ChromeTabReturns)) {
+func Enqueue(action, url string, callback chan cdptab.ChromeTabReturns) {
 	queue <- task{
 		Action:   action,
 		URL:      url,
@@ -40,7 +40,6 @@ func processRequest(task task) {
 		log.Printf("[++] Processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
 		defer log.Printf("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
 		defer tab.Ready()                             // When we are done, make the tab available again.
-		channel := make(chan cdptab.ChromeTabReturns) // Channel to communicate
 
 		var act func(chan cdptab.ChromeTabReturns)
 		switch task.Action {
@@ -55,8 +54,7 @@ func processRequest(task task) {
 		}
 
 		tab.Navigate(task.URL)   // Navigate
-		go act(channel)          // Execute the function.
-		task.Callback(<-channel) // Run the callback to send the data.
+		go act(task.Callback)          // Execute the function.
 	}
 }
 
@@ -76,3 +74,4 @@ func getFreeTab() *cdptab.ChromeTab {
 
 	return nil
 }
+
