@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/elastifeed/es-scraper/internal/storage"
@@ -40,8 +41,15 @@ func NewBrowserTab(id uint, store storage.Storager, parentContext *context.Conte
 
 	// Create the new context
 	ctx, cancel := chromedp.NewContext(*parentContext, chromedp.WithLogf(log.Printf))
+
 	// Ensure the tab is actually started.
 	if err := chromedp.Run(ctx); err != nil {
+		panic(err)
+	}
+
+	// Set metrics
+	metrics := emulation.SetDeviceMetricsOverride(1024, 1024, 1.0, true)
+	if err := chromedp.Run(ctx, metrics); err != nil {
 		panic(err)
 	}
 
