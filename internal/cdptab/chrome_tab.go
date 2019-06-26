@@ -35,10 +35,6 @@ type ChromeTabReturns struct {
 	Err  error
 }
 
-// Data structures to save results.
-var pdfSaver = storage.New("pdf")
-var screenshotSaver = storage.New("png")
-
 // NewBrowserTab creates a new tab and returns it.
 func NewBrowserTab(id uint, store storage.Storager, parentContext *context.Context) ChromeTab {
 
@@ -111,7 +107,7 @@ func (tab *ChromeTab) Screenshot(ch chan ChromeTabReturns) {
 	}
 
 	// Save the result
-	savePath, saverr := screenshotSaver.InFolderOf(tab.URL).Save(&result) // @TODO Cause for race condition?
+	savePath, saverr := tab.Store.Upload(result, "png")
 	if saverr != nil {
 		ch <- ChromeTabReturns{nil, saverr}
 		return
@@ -149,7 +145,7 @@ func (tab *ChromeTab) Pdf(ch chan ChromeTabReturns) {
 		ch <- ChromeTabReturns{nil, err}
 		return
 	}
-	savePath, saverr := pdfSaver.InFolderOf(tab.URL).Save(&result)
+	savePath, saverr := tab.Store.Upload(result, "pdf")
 	if saverr != nil {
 		ch <- ChromeTabReturns{nil, saverr}
 		return
