@@ -6,6 +6,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/elastifeed/es-scraper/internal/cdptab"
+	"github.com/elastifeed/es-scraper/internal/storage"
 )
 
 const userAgent = "Googlebot/2.1 (+http://www.google.com/bot.html)"
@@ -18,7 +19,7 @@ var BrowserTabs = struct {
 }{tabs: []cdptab.ChromeTab{}}
 
 // Launch starts a new headless browser and returns the function to cancel that browser.
-func Launch() (context.Context, context.CancelFunc) {
+func Launch(store storage.Storager) (context.Context, context.CancelFunc) {
 	launchOpts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
@@ -34,7 +35,7 @@ func Launch() (context.Context, context.CancelFunc) {
 	queue = make(chan task)
 	for i := 0; i < numTabs; i++ {
 		// Create and keep track of tabs
-		BrowserTabs.tabs = append(BrowserTabs.tabs, cdptab.NewBrowserTab(uint(i), &allocctx))
+		BrowserTabs.tabs = append(BrowserTabs.tabs, cdptab.NewBrowserTab(uint(i), store, &allocctx))
 		// Start the task queue workers
 		go queueWorker(queue)
 	}

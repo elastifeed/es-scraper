@@ -26,6 +26,7 @@ type ChromeTab struct {
 	Stop    *context.CancelFunc // CancelFunc to cancel it's context
 	URL     string              // The url that is loaded in this tab
 	State   tabState            // The working state of this tab. Whether it is ready to accept a new request or still busy with another request
+	Store   storage.Storager    // S3 Storage where PDFs etc get stored
 }
 
 // ChromeTabReturns is a datastructure for the results of any operation on a tab.
@@ -39,7 +40,7 @@ var pdfSaver = storage.New("pdf")
 var screenshotSaver = storage.New("png")
 
 // NewBrowserTab creates a new tab and returns it.
-func NewBrowserTab(id uint, parentContext *context.Context) ChromeTab {
+func NewBrowserTab(id uint, store storage.Storager, parentContext *context.Context) ChromeTab {
 
 	// Create the new context
 	ctx, cancel := chromedp.NewContext(*parentContext, chromedp.WithLogf(log.Printf))
@@ -48,7 +49,14 @@ func NewBrowserTab(id uint, parentContext *context.Context) ChromeTab {
 		panic(err)
 	}
 
-	return ChromeTab{ID: id, Context: &ctx, Stop: &cancel, URL: "", State: Accepting}
+	return ChromeTab{
+		ID:      id,
+		Store:   store,
+		Context: &ctx,
+		Stop:    &cancel,
+		URL:     "",
+		State:   Accepting,
+	}
 
 }
 
