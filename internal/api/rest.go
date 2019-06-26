@@ -42,26 +42,27 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	callback := func(result cdptab.ChromeTabReturns) {
-		if result.Err != nil {
-			log.Print(result.Err)
-			//w.WriteHeader(http.StatusBadRequest)
-			w.Write(*responseError(result.Err))
-			return
-		}
-
-		data, err := json.Marshal(result.Data)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(*responseError(err))
-			return
-		}
-		log.Printf("Got result %s", data)
-
-		w.Write(data)
+	// Enqueue request, make a channel for the result and block until the result has arrived
+	callback  := make(chan cdptab.ChromeTabReturns)
+	cdp.Enqueue(action, url, callback)
+	result := <- callback
+	
+	if result.Err != nil {
+		log.Print(result.Err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(*responseError(result.Err))
+		return
 	}
 
-	cdp.Enqueue(action, url, callback)
+	data, err := json.Marshal(result.Data)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(*responseError(err))
+		return 
+		}
+	log.Printf("Got result %s", data)
+
+	w.Write(data)
 }
 
 func isValidAction(action string) bool {
