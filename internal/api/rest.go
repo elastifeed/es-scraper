@@ -43,10 +43,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enqueue request, make a channel for the result and block until the result has arrived
-	callback  := make(chan cdptab.ChromeTabReturns)
+	callback := make(chan cdptab.ChromeTabReturns)
 	cdp.Enqueue(action, url, callback)
-	result := <- callback
-	
+	result := <-callback
+
 	if result.Err != nil {
 		log.Print(result.Err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -58,9 +58,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(*responseError(err))
-		return 
-		}
-	log.Printf("Got result %s", data)
+		return
+	}
+	log.Printf("Got result for %s on %s", action, url)
 
 	w.Write(data)
 }

@@ -10,7 +10,7 @@ import (
 )
 
 const userAgent = "Googlebot/2.1 (+http://www.google.com/bot.html)"
-const numTabs = 2
+const numTabs = 5
 
 // BrowserTabs contains a list of tabs in this browser.
 var BrowserTabs = struct {

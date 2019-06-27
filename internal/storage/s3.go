@@ -39,7 +39,8 @@ func NewS3(awsconf *aws.Config, subdir string, endpoint string) (Storager, error
 
 // Upload a byte slice to the S3 provider and output a public accessable URL for it
 func (i s3driver) Upload(data []byte, ending string) (string, error) {
-	key := uuid.NewV4().String() + "." + ending
+	uuid, _ := uuid.NewV4()
+	key := uuid.String() + "." + ending
 
 	_, err := i.client.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(i.subdir),

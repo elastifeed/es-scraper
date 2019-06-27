@@ -42,7 +42,7 @@ func main() {
 
 	server := &http.Server{
 		Handler:      r,
-		Addr:         ":8080", //os.Getenv("API_BIND_SCRAPE"),
+		Addr:         os.Getenv("API_BIND_SCRAPE"),
 		WriteTimeout: 30 * time.Second,
 		ReadTimeout:  30 * time.Second,
 	}

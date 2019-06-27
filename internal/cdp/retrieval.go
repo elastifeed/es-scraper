@@ -10,7 +10,7 @@ import (
 type task struct {
 	Action   string
 	URL      string
-	Callback chan cdptab.ChromeTabReturns 
+	Callback chan cdptab.ChromeTabReturns
 }
 
 var queue chan task
@@ -38,8 +38,8 @@ func processRequest(task task) {
 		panic(tab)
 	} else {
 		log.Printf("[++] Processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
-		defer log.Printf("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
-		defer tab.Ready()                             // When we are done, make the tab available again.
+		//defer log.Printf("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
+		defer tab.Ready() // When we are done, make the tab available again.
 
 		var act func(chan cdptab.ChromeTabReturns)
 		switch task.Action {
@@ -53,8 +53,8 @@ func processRequest(task task) {
 			act = tab.Pdf
 		}
 
-		tab.Navigate(task.URL)   // Navigate
-		go act(task.Callback)          // Execute the function.
+		tab.Navigate(task.URL) // Navigate
+		go act(task.Callback)  // Execute the function.
 	}
 }
 
@@ -74,4 +74,3 @@ func getFreeTab() *cdptab.ChromeTab {
 
 	return nil
 }
-
