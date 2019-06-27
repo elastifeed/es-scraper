@@ -38,7 +38,7 @@ func processRequest(task task) {
 		panic(tab)
 	} else {
 		log.Printf("[++] Processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
-		//defer log.Printf("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
+		defer log.Printf("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
 		defer tab.Ready() // When we are done, make the tab available again.
 
 		var act func(chan cdptab.ChromeTabReturns)
@@ -54,7 +54,7 @@ func processRequest(task task) {
 		}
 
 		tab.Navigate(task.URL) // Navigate
-		go act(task.Callback)  // Execute the function.
+		act(task.Callback)     // Execute the function.
 	}
 }
 
