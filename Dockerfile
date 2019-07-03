@@ -22,7 +22,7 @@ FROM chromedp/headless-shell:77.0.3834.2
 
 LABEL maintainer="Matthias Riegler <me@xvzf.tech>"
 
-RUN RUN apt-get update && apt-get upgrade -y \
+RUN apt-get update && apt-get upgrade -y \
  && rm -rf /var/lib/apt/lists/*
 
 
