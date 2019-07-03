@@ -22,6 +22,10 @@ FROM chromedp/headless-shell:77.0.3834.2
 
 LABEL maintainer="Matthias Riegler <me@xvzf.tech>"
 
+RUN RUN apt-get update && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/*
+
+
 COPY --from=builder /go/bin/es-scraper /go/bin/es-scraper
 
 # Fixed port
