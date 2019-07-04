@@ -16,6 +16,15 @@ import (
 	"github.com/elastifeed/es-scraper/internal/storage"
 )
 
+// getEnv is a helper to get a value from env or a default value
+func getEnv(key, def string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+
+	return def
+}
+
 /*
  Entrypoint for es scraper. Configuration is done via enviroment:
 
@@ -27,12 +36,16 @@ func main() {
 	// Initiate storage backend
 	store, err := storage.NewS3(&aws.Config{
 		// @TODO get credentials and endpoint from environment, these are just test credentials :-P
-		Credentials:      credentials.NewStaticCredentials("K279UGQBCW1RM3G1IITH", "s11DBCiqv9hnqoJ9drpEAQJkkBO2EP0Gv7u6MgLf", ""),
-		Endpoint:         aws.String("http://localhost:30098"),
-		Region:           aws.String("us-east-1"), // Somehow this is needed
+		Credentials: credentials.NewStaticCredentials(
+			getEnv("AWS_ACCESS_KEY_ID", ""),
+			getEnv("AWS_SECRET_ACCESS_KEY", ""),
+			"",
+		),
+		Endpoint:         aws.String(getEnv("AWS_ENDPOINT", "")),
+		Region:           aws.String(getEnv("AWS_REGION", "us-east-1")), // Somehow this is needed
 		DisableSSL:       aws.Bool(false),
 		S3ForcePathStyle: aws.Bool(true),
-	}, "elastitest", "http://localhost:30098/")
+	}, getEnv("S3_BUCKET_NAME", ""), getEnv("S3_ENDPOINT", "http://localhost/"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -42,7 +55,7 @@ func main() {
 
 	server := &http.Server{
 		Handler:      r,
-		Addr:         os.Getenv("API_BIND_SCRAPE"),
+		Addr:         getEnv("API_BIND", ":9090"),
 		WriteTimeout: 30 * time.Second,
 		ReadTimeout:  30 * time.Second,
 	}
@@ -55,7 +68,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	log.Print("Set up endpoint on", os.Getenv("API_BIND_SCRAPE"))
+	log.Print("Set up endpoint on", server.Addr)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c)
