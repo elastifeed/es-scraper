@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -61,8 +62,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Got result for %s on %s", action, url)
+	//log.Print(string(data))
 
-	w.Write(data)
+	io.WriteString(w, string(data))
 }
 
 func isValidAction(action string) bool {
