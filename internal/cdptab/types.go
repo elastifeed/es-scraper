@@ -14,16 +14,16 @@ const (
 	Accepting tabState = iota
 	Busy
 )
-const mercuryParser = "http://localhost:8080/mercury/html"
 
 // ChromeTab describes the relevant data of a tab in a browser.
 type ChromeTab struct {
-	ID      uint                // Id of the browser tab
-	Context *context.Context    // Pointer to the context that describes this tab
-	Stop    *context.CancelFunc // CancelFunc to cancel it's context
-	URL     string              // The url that is loaded in this tab
-	State   tabState            // The working state of this tab. Whether it is ready to accept a new request or still busy with another request
-	Store   storage.Storager    // S3 Storage where PDFs etc get stored
+	ID         uint                // Id of the browser tab
+	Context    *context.Context    // Pointer to the context that describes this tab
+	Stop       *context.CancelFunc // CancelFunc to cancel it's context
+	URL        string              // The url that is loaded in this tab
+	State      tabState            // The working state of this tab. Whether it is ready to accept a new request or still busy with another request
+	Store      storage.Storager    // S3 Storage where PDFs etc get stored
+	MercuryURL string              // Mercury URL
 }
 
 // ChromeTabReturns is a datastructure for the results of any operation on a tab.
