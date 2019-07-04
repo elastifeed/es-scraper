@@ -60,8 +60,8 @@ func main() {
 		ReadTimeout:  30 * time.Second,
 	}
 
-	ctx, cancel := cdp.Launch(store) // Start a new headless chrome browser with s3 storage
-	defer cancel()                   // Defer closing the browser until main ends.
+	ctx, cancel := cdp.Launch(getEnv("MERCURY_URL", "localhost:8080/mercury/html"), store) // Start a new headless chrome browser with s3 storage
+	defer cancel()                                                                         // Defer closing the browser until main ends.
 
 	go func() { // Run the server in a non - blocking goroutine
 		if err := server.ListenAndServe(); err != nil {

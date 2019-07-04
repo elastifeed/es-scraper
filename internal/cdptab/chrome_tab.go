@@ -16,7 +16,7 @@ import (
 )
 
 // NewBrowserTab creates a new tab and returns it.
-func NewBrowserTab(id uint, store storage.Storager, parentContext *context.Context) ChromeTab {
+func NewBrowserTab(id uint, mercuryURL string, store storage.Storager, parentContext *context.Context) ChromeTab {
 
 	// Create the new context
 	ctx, cancel := chromedp.NewContext(*parentContext, chromedp.WithLogf(log.Printf))
@@ -33,12 +33,13 @@ func NewBrowserTab(id uint, store storage.Storager, parentContext *context.Conte
 	}
 
 	return ChromeTab{
-		ID:      id,
-		Store:   store,
-		Context: &ctx,
-		Stop:    &cancel,
-		URL:     "",
-		State:   Accepting,
+		ID:         id,
+		Store:      store,
+		Context:    &ctx,
+		Stop:       &cancel,
+		URL:        "",
+		MercuryURL: mercuryURL,
+		State:      Accepting,
 	}
 
 }
@@ -171,7 +172,7 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 
 	// Post to the mercury api for the content
 	client := &http.Client{}
-	req, _ := http.NewRequest("POST", mercuryParser, r)
+	req, _ := http.NewRequest("POST", tab.MercuryURL, r)
 	req.Header.Set("Content-Type", "application/json")
 
 	log.Printf("[%d] Retrieving content...", tab.ID)

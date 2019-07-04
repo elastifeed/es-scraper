@@ -19,7 +19,7 @@ var BrowserTabs = struct {
 }{tabs: []cdptab.ChromeTab{}}
 
 // Launch starts a new headless browser and returns the function to cancel that browser.
-func Launch(store storage.Storager) (context.Context, context.CancelFunc) {
+func Launch(mercuryURL string, store storage.Storager) (context.Context, context.CancelFunc) {
 	launchOpts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
@@ -35,7 +35,7 @@ func Launch(store storage.Storager) (context.Context, context.CancelFunc) {
 	queue = make(chan task)
 	for i := 0; i < numTabs; i++ {
 		// Create and keep track of tabs
-		BrowserTabs.tabs = append(BrowserTabs.tabs, cdptab.NewBrowserTab(uint(i), store, &allocctx))
+		BrowserTabs.tabs = append(BrowserTabs.tabs, cdptab.NewBrowserTab(uint(i), mercuryURL, store, &allocctx))
 		// Start the task queue workers
 		go queueWorker(queue)
 	}
