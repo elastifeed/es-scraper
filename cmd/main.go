@@ -55,7 +55,7 @@ func main() {
 
 	server := &http.Server{
 		Handler:      r,
-		Addr:         os.Getenv("API_BIND_SCRAPE"),
+		Addr:         getEnv("API_BIND", ":9090"),
 		WriteTimeout: 30 * time.Second,
 		ReadTimeout:  30 * time.Second,
 	}
@@ -68,7 +68,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	log.Print("Set up endpoint on", os.Getenv("API_BIND_SCRAPE"))
+	log.Print("Set up endpoint on", server.Addr)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c)

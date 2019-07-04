@@ -14,3 +14,4 @@ Retrieves content from abitrary websites and fills it into the provided JSON int
 - AWS_ENDPOINT
 - S3_ENDPOINT
 - S3_BUCKET_NAME
+- API_BIND
