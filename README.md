@@ -6,3 +6,11 @@ Retrieves content from abitrary websites and fills it into the provided JSON int
 
 ## Dependencies
 - `golang`
+
+## Parameters:
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- AWS_ENDPOINT
+- S3_ENDPOINT
+- S3_BUCKET_NAME
