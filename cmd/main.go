@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"flag"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"k8s.io/klog"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -31,7 +31,7 @@ func getEnv(key, def string) string {
  - API_BIND_SCRAPE: IP and port for server (eg. ":8080")
 */
 func main() {
-	flag.Parse()
+	klog.InitFlags(nil)
 
 	// Initiate storage backend
 	store, err := storage.NewS3(&aws.Config{
@@ -48,7 +48,7 @@ func main() {
 	}, getEnv("S3_BUCKET_NAME", ""), getEnv("S3_ENDPOINT", "http://localhost/"))
 
 	if err != nil {
-		log.Fatal(err)
+		klog.Fatal(err)
 	}
 
 	r := api.InitRouter()
@@ -60,15 +60,15 @@ func main() {
 		ReadTimeout:  30 * time.Second,
 	}
 
-	ctx, cancel := cdp.Launch(getEnv("MERCURY_URL", "localhost:8080/mercury/html"), store) // Start a new headless chrome browser with s3 storage
-	defer cancel()                                                                         // Defer closing the browser until main ends.
+	ctx, cancel := cdp.Launch(getEnv("MERCURY_URL", "http://localhost:8080/mercury/html"), store) // Start a new headless chrome browser with s3 storage
+	defer cancel()                                                                                // Defer closing the browser until main ends.
 
 	go func() { // Run the server in a non - blocking goroutine
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			klog.Fatal(err)
 		}
 	}()
-	log.Print("Set up endpoint on", server.Addr)
+	klog.Info("Set up endpoint on", server.Addr)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c)

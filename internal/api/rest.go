@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
+
+	"k8s.io/klog"
 
 	"github.com/elastifeed/es-scraper/internal/cdp"
 	"github.com/elastifeed/es-scraper/internal/cdptab"
@@ -31,6 +31,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	action := vars["action"]
 
 	if !isValidAction(action) {
+		klog.Warning("Recieved request for invalid aciton \"%s\"", action)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(*responseError(errors.New("Path not found")))
 		return
@@ -38,6 +39,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	url, err := decodeRequest(r) // Decode the incoming
 	if err != nil {
+		klog.Error(err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(*responseError(err))
 		return
@@ -49,7 +51,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	result := <-callback
 
 	if result.Err != nil {
-		log.Print(result.Err)
+		klog.Error(result.Err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(*responseError(result.Err))
 		return
@@ -57,14 +59,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := json.Marshal(result.Data)
 	if err != nil {
+		klog.Error(err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(*responseError(err))
 		return
 	}
-	log.Printf("Got result for %s on %s", action, url)
-	//log.Print(string(data))
+	klog.Infof("Got result for %s on %s", action, url)
+	//klog.Info(string(data))
 
-	io.WriteString(w, string(data))
+	n, err := w.Write(data)
+	if err != nil {
+		klog.Error("Written error", err)
+	}
+	klog.Infof("Written: n : %d", n)
+	//io.WriteString(w, string(data))
 }
 
 func isValidAction(action string) bool {

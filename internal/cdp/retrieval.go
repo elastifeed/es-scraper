@@ -1,7 +1,7 @@
 package cdp
 
 import (
-	"log"
+	"k8s.io/klog"
 
 	"github.com/elastifeed/es-scraper/internal/cdptab"
 )
@@ -34,11 +34,11 @@ func queueWorker(queue <-chan task) {
 // processRequest procceses a request from the task queue and runs the callback.
 func processRequest(task task) {
 	if tab := getFreeTab(); tab == nil {
-		// @TODO is this never called when there are no free tabs?
+		klog.Exitf("Nil tab assigned to worker for %s - %s", task.URL, task.Action)
 		panic(tab)
 	} else {
-		log.Printf("[++] Processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
-		defer log.Printf("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
+		klog.Infof("[++] Processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
+		defer klog.Infof("[++] Finished processing %s - %s on tab %d", task.URL, task.Action, tab.ID)
 		defer tab.Ready() // When we are done, make the tab available again.
 
 		var act func(chan cdptab.ChromeTabReturns)
@@ -66,7 +66,7 @@ func getFreeTab() *cdptab.ChromeTab {
 	// Find the first free tab, otherwise return nil to indicate that the request has to be queued.
 	for i := range BrowserTabs.tabs {
 		if BrowserTabs.tabs[i].State == cdptab.Accepting {
-			log.Printf("[+] Found ready tab: %d, -- State: %d", BrowserTabs.tabs[i].ID, BrowserTabs.tabs[i].State)
+			klog.Infof("[+] Found ready tab: %d, -- State: %d", BrowserTabs.tabs[i].ID, BrowserTabs.tabs[i].State)
 			BrowserTabs.tabs[i].Busy() // Set the found tab to busy.
 			return &BrowserTabs.tabs[i]
 		}
