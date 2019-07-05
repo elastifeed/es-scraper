@@ -31,7 +31,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	action := vars["action"]
 
 	if !isValidAction(action) {
-		klog.Warning("Recieved request for invalid aciton \"%s\"", action)
+		klog.Warningf("Recieved request for invalid aciton \"%s\"", action)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(*responseError(errors.New("Path not found")))
 		return
@@ -69,10 +69,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	n, err := w.Write(data)
 	if err != nil {
-		klog.Error("Written error", err)
+		klog.Error("Error writing response: ", err)
 	}
-	klog.Infof("Written: n : %d", n)
-	//io.WriteString(w, string(data))
+	klog.Infof("Written response with %d bytes", n)
 }
 
 func isValidAction(action string) bool {
@@ -105,3 +104,4 @@ func responseError(err error) *[]byte {
 	msg := []byte(fmt.Sprintf("{\"status\": \"bad request \n%s\"}", err.Error()))
 	return &msg
 }
+

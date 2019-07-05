@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	"k8s.io/klog"
 
@@ -54,10 +53,8 @@ func main() {
 	r := api.InitRouter()
 
 	server := &http.Server{
-		Handler:      r,
-		Addr:         getEnv("API_BIND", ":9090"),
-		WriteTimeout: 30 * time.Second,
-		ReadTimeout:  30 * time.Second,
+		Handler: r,
+		Addr:    getEnv("API_BIND", ":9090"),
 	}
 
 	ctx, cancel := cdp.Launch(getEnv("MERCURY_URL", "http://localhost:8080/mercury/html"), store) // Start a new headless chrome browser with s3 storage
@@ -80,3 +77,4 @@ func main() {
 
 	server.Shutdown(context) // Shutdown the server gracefully.
 }
+
