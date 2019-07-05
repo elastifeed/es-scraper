@@ -68,7 +68,7 @@ func main() {
 	klog.Info("Set up endpoint on", server.Addr)
 
 	c := make(chan os.Signal, 1)
-	signal.Notify(c)
+	signal.Notify(c, os.Interrupt)
 	// Create a context based on the context of the browser. So, if the browser is closed, the server will shut down.
 	context, stop := context.WithCancel(ctx)
 	defer stop()
