@@ -2,7 +2,8 @@ package storage
 
 import (
 	"bytes"
-	"log"
+
+	"k8s.io/klog"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -32,7 +33,7 @@ func NewS3(awsconf *aws.Config, subdir string, endpoint string) (Storager, error
 		return nil, err
 	}
 
-	log.Printf("Created S3 bucket %s", subdir)
+	klog.Infof("Created S3 bucket %s", subdir)
 
 	return c, nil
 }
@@ -55,7 +56,7 @@ func (i s3driver) Upload(data []byte, ending string) (string, error) {
 
 	url := i.endpoint + i.subdir + "/" + key
 
-	log.Printf("Uploaded %d bytes to S3: %s", len(data), url)
+	klog.Infof("Uploaded %d bytes to S3: %s", len(data), url)
 
 	return url, nil
 }

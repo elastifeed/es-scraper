@@ -6,20 +6,20 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/elastifeed/es-scraper/internal/storage"
+	"k8s.io/klog"
 )
 
 // NewBrowserTab creates a new tab and returns it.
 func NewBrowserTab(id uint, mercuryURL string, store storage.Storager, parentContext *context.Context) ChromeTab {
 
 	// Create the new context
-	ctx, cancel := chromedp.NewContext(*parentContext, chromedp.WithLogf(log.Printf))
+	ctx, cancel := chromedp.NewContext(*parentContext, chromedp.WithLogf(klog.Infof))
 
 	// Ensure the tab is actually started.
 	if err := chromedp.Run(ctx); err != nil {
@@ -31,6 +31,7 @@ func NewBrowserTab(id uint, mercuryURL string, store storage.Storager, parentCon
 	if err := chromedp.Run(ctx, metrics); err != nil {
 		panic(err)
 	}
+	klog.Infof("[%d] Tab %d started with mercury at %s", id, id, mercuryURL)
 
 	return ChromeTab{
 		ID:         id,
@@ -58,6 +59,7 @@ func (tab *ChromeTab) Ready() {
 func (tab *ChromeTab) Navigate(url string) error {
 	tab.URL = url
 	chromedp.Run(*tab.Context, chromedp.Navigate(url))
+	klog.Infof("[%d] Navigated to url:\t%s", tab.ID, tab.URL)
 
 	return nil
 }
@@ -74,7 +76,7 @@ func (tab *ChromeTab) Screenshot(ch chan ChromeTabReturns) {
 	tasks := chromedp.Tasks{
 		// Build the neccessary function(s)
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Printf("[%d] Taking screenshot...", tab.ID)
+			klog.Infof("[%d] Taking screenshot...", tab.ID)
 			viewport := page.Viewport{
 				X:      0,
 				Y:      0,
@@ -84,7 +86,7 @@ func (tab *ChromeTab) Screenshot(ch chan ChromeTabReturns) {
 			}
 			var err error
 			result, err = page.CaptureScreenshot().WithClip(&viewport).Do(ctx)
-			log.Printf("[%d] Taking screenshot done.", tab.ID)
+			klog.Infof("[%d] Taking screenshot done.", tab.ID)
 			return err
 		}),
 	}
@@ -100,6 +102,7 @@ func (tab *ChromeTab) Screenshot(ch chan ChromeTabReturns) {
 		ch <- ChromeTabReturns{nil, saverr}
 		return
 	}
+	klog.Infof("[%d] Saved screenshot to %s", tab.ID, savePath)
 
 	data := map[string]interface{}{
 		"screenshot": savePath,
@@ -120,11 +123,11 @@ func (tab *ChromeTab) Pdf(ch chan ChromeTabReturns) {
 		//chromedp.WaitReady("#document"),
 		// Use a chromedp.ActionFunc to build an executable function
 		chromedp.ActionFunc(func(ctx context.Context) error { // The context is set when Run calls Do for each each Action
-			log.Printf("[%d] Rendering pdf...", tab.ID)
+			klog.Infof("[%d] Rendering pdf...", tab.ID)
 
 			var err error
 			result, _, err = page.PrintToPDF().WithTransferMode(page.PrintToPDFTransferModeReturnAsBase64).Do(ctx)
-			log.Printf("[%d] Rendering pdf done.", tab.ID)
+			klog.Infof("[%d] Rendering pdf done.", tab.ID)
 			return err
 
 		}),
@@ -138,6 +141,7 @@ func (tab *ChromeTab) Pdf(ch chan ChromeTabReturns) {
 		ch <- ChromeTabReturns{nil, saverr}
 		return
 	}
+	klog.Infof("[%d] Saved pdf to %s", tab.ID, savePath)
 
 	data := map[string]interface{}{
 		"pdf": savePath,
@@ -156,9 +160,9 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 	}
 
 	// Retrieve the entire page's html
-	log.Printf("[%d] Extracting html...", tab.ID)
+	klog.Infof("[%d] Extracting html...", tab.ID)
 	chromedp.Run(*tab.Context, chromedp.OuterHTML("html", &html))
-	log.Printf("[%d] Extracting html done.", tab.ID)
+	klog.Infof("[%d] Extracting html done.", tab.ID)
 
 	// Encode the data for json
 	r, w := io.Pipe()
@@ -175,7 +179,7 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 	req, _ := http.NewRequest("POST", tab.MercuryURL, r)
 	req.Header.Set("Content-Type", "application/json")
 
-	log.Printf("[%d] Retrieving content...", tab.ID)
+	klog.Infof("[%d] Retrieving content...", tab.ID)
 	resp, err := client.Do(req)
 	if err != nil {
 		ch <- ChromeTabReturns{nil, err}
@@ -189,6 +193,7 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(body, &result) // Unmarshal the body to work with it
+	klog.Infof("[%d] Retrieving content done.", tab.ID)
 
 	// Download the thumbnail image
 	thumbnail, saverr := tab.thumbnail(&result)
@@ -199,7 +204,6 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 
 	result["thumbnail"] = thumbnail
 	delete(result, "lead_image_url")
-	log.Printf("[%d] Retrieving content done.", tab.ID)
 
 	ch <- ChromeTabReturns{result, nil}
 }
@@ -209,13 +213,12 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 func (tab *ChromeTab) thumbnail(res *map[string]interface{}) (string, error) {
 	address, ok := (*res)["lead_image_url"].(string)
 	if ok == false {
-		log.Printf("[%d] Had no thumbnail.", tab.ID)
+		klog.Warningf("[%d] Had no thumbnail.", tab.ID)
 		return "", nil
 	}
 
 	resp, err := http.Get(address)
 	if err != nil {
-		log.Printf("[%d] Error downloading thumnail", tab.ID)
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -226,6 +229,7 @@ func (tab *ChromeTab) thumbnail(res *map[string]interface{}) (string, error) {
 	if saverr != nil {
 		return "", saverr
 	}
+	klog.Infof("[%d] Saved thumbnail to %s.", tab.ID, savePath)
 
 	return savePath, nil
 }
@@ -237,7 +241,7 @@ func (tab *ChromeTab) Scrape(ch chan ChromeTabReturns) {
 	con := make(chan ChromeTabReturns)
 
 	// Run each action in their own routine, collect and combine results before sending.
-	log.Printf("[%d] Full scrape...", tab.ID)
+	klog.Infof("[%d] Full scrape...", tab.ID)
 	go tab.Screenshot(screen)
 	go tab.Pdf(pdf)
 	go tab.Content(con)
@@ -247,24 +251,21 @@ func (tab *ChromeTab) Scrape(ch chan ChromeTabReturns) {
 	c := <-con
 
 	if s.Err != nil {
-		log.Print(s.Err)
 		ch <- ChromeTabReturns{nil, s.Err}
 		return
 	}
 	if p.Err != nil {
-		log.Print(p.Err)
 		ch <- ChromeTabReturns{nil, p.Err}
 		return
 	}
 	if c.Err != nil {
-		log.Print(c.Err)
 		ch <- ChromeTabReturns{nil, c.Err}
 		return
 	}
 
 	c.Data["screenshot"] = s.Data["screenshot"]
 	c.Data["pdf"] = p.Data["pdf"]
-	log.Printf("[%d] Full scrape done.", tab.ID)
+	klog.Infof("[%d] Full scrape done.", tab.ID)
 
 	ch <- c
 }

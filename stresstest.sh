@@ -1,6 +1,7 @@
 #!/bin/bash
 
- adresses="
+
+adresses="
 https://www.golem.de/news/auslagerung-us-chiphersteller-umgehen-trumps-embargo-gegen-huawei-1906-142170.html
 https://www.focus.de/politik/deutschland/rechtsextremen-auf-der-spur-stephan-e-gesteht-mord-an-luebcke-die-schluesselfrage-jetzt-war-er-allein_id_10867340.html
 https://de.yahoo.com/sports/news/cathy-hummels-erst-dann-dortmund-203702414.html
@@ -19,7 +20,7 @@ for a in $adresses
 do
     data="{\"url\":\""$a"\"}"
     echo "Sending: " $data
-    curl -X POST -H "Content-Type: application/json" -d $data http://localhost:8082/scrape/all && echo &
+    curl -X POST -H "Content-Type: application/json" -d $data http://localhost:9090/scrape/all && echo &
     let i++
 done
 
