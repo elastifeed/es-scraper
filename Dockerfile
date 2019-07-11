@@ -18,11 +18,11 @@ RUN go get -d -v ./...
 RUN CGO_ENABLED=0 GOOS=linux go build ./cmd/main.go && mkdir -p /go/bin/ && mv main /go/bin/es-scraper
 
 # Use the chromedp headless image as described under https://github.com/chromedp/chromedp#frequently-asked-questions
-FROM chromedp/headless-shell:77.0.3834.2
+FROM ubuntu:18.04
 
 LABEL maintainer="Matthias Riegler <me@xvzf.tech>"
 
-RUN apt-get update && apt-get upgrade -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg \
  && rm -rf /var/lib/apt/lists/*
 
 
@@ -32,7 +32,7 @@ COPY --from=builder /go/bin/es-scraper /go/bin/es-scraper
 ENV API_BIND=":9090"
 
 # Set path
-ENV PATH $PATH:/headless-shell
+# ENV PATH $PATH:/headless-shell
 
 ENTRYPOINT ["/go/bin/es-scraper"]
 
