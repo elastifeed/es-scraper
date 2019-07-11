@@ -22,7 +22,7 @@ FROM ubuntu:18.04
 
 LABEL maintainer="Matthias Riegler <me@xvzf.tech>"
 
-RUN apt-get update && apt-get upgrade -y && apt-get install libxss1 libappindicator1 libindicator7
+RUN apt-get update && apt-get upgrade -y && apt-get install libxss1 libappindicator1 libindicator7 \
  && rm -rf /var/lib/apt/lists/*
 
 # Try installing the actual chrome client
