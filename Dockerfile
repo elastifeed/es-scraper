@@ -22,12 +22,13 @@ FROM ubuntu:18.04
 
 LABEL maintainer="Matthias Riegler <me@xvzf.tech>"
 
-RUN apt-get update && apt-get upgrade -y && apt-get install libxss1 libappindicator1 libindicator7 \
- && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y \
+ && apt-get install -y wget
 
 # Try installing the actual chrome client
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && apt install ./google-chrome*.deb
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && apt install -y ./google-chrome*.deb
 
+RUN rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /go/bin/es-scraper /go/bin/es-scraper
 
