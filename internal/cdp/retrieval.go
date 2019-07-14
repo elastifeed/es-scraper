@@ -53,8 +53,13 @@ func processRequest(task task) {
 			act = tab.Pdf
 		}
 
-		tab.Navigate(task.URL) // Navigate
-		act(task.Callback)     // Execute the function.
+		naverr := tab.Navigate(task.URL) // Navigate
+		if naverr != nil {
+			task.Callback <- cdptab.ChromeTabReturns{Data: nil, Err: naverr}
+			return
+		}
+		act(task.Callback) // Execute the function.
+		close(task.Callback)
 	}
 }
 

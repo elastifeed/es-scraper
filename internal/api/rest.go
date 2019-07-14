@@ -29,7 +29,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	action := vars["action"]
+	callback := make(chan cdptab.ChromeTabReturns)
 
+	monitorConnection(w, callback)
 	if !isValidAction(action) {
 		klog.Warningf("Recieved request for invalid aciton \"%s\"", action)
 		w.WriteHeader(http.StatusNotFound)
@@ -46,7 +48,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enqueue request, make a channel for the result and block until the result has arrived
-	callback := make(chan cdptab.ChromeTabReturns)
 	cdp.Enqueue(action, url, callback)
 	result := <-callback
 
@@ -100,8 +101,20 @@ func decodeRequest(r *http.Request) (string, error) {
 
 }
 
+func monitorConnection(w http.ResponseWriter, toCancel chan cdptab.ChromeTabReturns) {
+	// Listen for the connection state.
+	// @TODO find a way to stop execution of a task when this happens
+	connectionState := w.(http.CloseNotifier).CloseNotify()
+	go func() {
+		<-connectionState
+
+		klog.Warning("Connection closed by peer")
+		//close(toCancel) // Close channel of the build task... Not enough :(
+	}()
+
+}
+
 func responseError(err error) *[]byte {
 	msg := []byte(fmt.Sprintf("{\"status\": \"bad request \n%s\"}", err.Error()))
 	return &msg
 }
-

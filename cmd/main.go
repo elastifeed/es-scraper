@@ -57,7 +57,7 @@ func main() {
 		Addr:    getEnv("API_BIND", ":9090"),
 	}
 
-	ctx, cancel := cdp.Launch(getEnv("MERCURY_URL", "http://localhost:8080/mercury/html"), store) // Start a new headless chrome browser with s3 storage
+	ctx, cancel := cdp.Launch(getEnv("MERCURY_URL", "http://localhost:8080/mercury/url"), store) // Start a new headless chrome browser with s3 storage
 	defer cancel()                                                                                // Defer closing the browser until main ends.
 
 	go func() { // Run the server in a non - blocking goroutine
@@ -77,4 +77,3 @@ func main() {
 
 	server.Shutdown(context) // Shutdown the server gracefully.
 }
-

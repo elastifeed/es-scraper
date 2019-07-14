@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
@@ -15,11 +17,13 @@ import (
 	"k8s.io/klog"
 )
 
+var navLock sync.Mutex
+
 // NewBrowserTab creates a new tab and returns it.
 func NewBrowserTab(id uint, mercuryURL string, store storage.Storager, parentContext *context.Context) ChromeTab {
 
 	// Create the new context
-	ctx, cancel := chromedp.NewContext(*parentContext, chromedp.WithLogf(klog.Infof))
+	ctx, cancel := chromedp.NewContext(*parentContext)
 
 	// Ensure the tab is actually started.
 	if err := chromedp.Run(ctx); err != nil {
@@ -57,11 +61,45 @@ func (tab *ChromeTab) Ready() {
 
 // Navigate the tab to a page
 func (tab *ChromeTab) Navigate(url string) error {
+	// Navigate and especially waiting for the page to be ready is a cause for a race condition.
+	// By locking the navigate funciton we ensure that this can't happen.
+	navLock.Lock()
+	defer navLock.Unlock()
 	tab.URL = url
-	chromedp.Run(*tab.Context, chromedp.Navigate(url))
-	klog.Infof("[%d] Navigated to url:\t%s", tab.ID, tab.URL)
+	klog.Infof("[%d] Reached target navigate.", tab.ID)
+	defer klog.Infof("[%d] Navigated to url:\t%s", tab.ID, tab.URL)
 
-	return nil
+	task := chromedp.ActionFunc(func(ctx context.Context) error {
+		_, _, _, err := page.Navigate(url).Do(ctx)
+		if err != nil {
+			klog.Errorf("[%d] Navigation error. %s", tab.ID, err)
+			return err
+		}
+		return waitLoadedOrTimeout(ctx)
+	})
+	return chromedp.Run(*tab.Context, task)
+}
+
+// waitLoadedOrTimeout blocks until a target receives a Page.loadEventFired or until a timeout is reached, at which point the page will be considered navigated.
+func waitLoadedOrTimeout(ctx context.Context) error {
+	// Modified version of waitLoaded in https://github.com/chromedp/chromedp/blob/5094b8b381a3f713ff230c638a601ff7c97479a3/nav.go
+	ch := make(chan struct{})
+	lctx, cancel := context.WithCancel(ctx)
+	chromedp.ListenTarget(lctx, func(ev interface{}) {
+		if _, ok := ev.(*page.EventLoadEventFired); ok {
+			cancel()
+			close(ch)
+		}
+	})
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(60 * time.Second): // Navigation timeout
+		klog.Warningf("[!] Navigation timed out. Continuing without Page.loadEventFired.")
+		return nil
+	}
 }
 
 // Screenshot renders the current page as a png file and saves the result.
@@ -126,6 +164,7 @@ func (tab *ChromeTab) Pdf(ch chan ChromeTabReturns) {
 			klog.Infof("[%d] Rendering pdf...", tab.ID)
 
 			var err error
+			emulation.SetEmulatedMedia("print").Do(ctx)
 			result, _, err = page.PrintToPDF().WithTransferMode(page.PrintToPDFTransferModeReturnAsBase64).Do(ctx)
 			klog.Infof("[%d] Rendering pdf done.", tab.ID)
 			return err
@@ -153,23 +192,17 @@ func (tab *ChromeTab) Pdf(ch chan ChromeTabReturns) {
 // Content retrieves the content on a page
 func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 	var result map[string]interface{}
-	var html string
 	if tab.URL == "" {
 		ch <- ChromeTabReturns{nil, errors.New("Tried retrieving content from empty page")}
 		return
 	}
-
-	// Retrieve the entire page's html
-	klog.Infof("[%d] Extracting html...", tab.ID)
-	chromedp.Run(*tab.Context, chromedp.OuterHTML("html", &html))
-	klog.Infof("[%d] Extracting html done.", tab.ID)
 
 	// Encode the data for json
 	r, w := io.Pipe()
 	defer r.Close()
 	//data := []byte(fmt.Sprintf("\"{\"url\":\"%s\", \"html\":\"%s\"}\"", tab.URL, html))
 	go func() {
-		payload := MercuryPayload{URL: tab.URL, HTML: html}
+		payload := MercuryPayload{URL: tab.URL}
 		json.NewEncoder(w).Encode(&payload)
 		defer w.Close()
 	}()
@@ -243,11 +276,12 @@ func (tab *ChromeTab) Scrape(ch chan ChromeTabReturns) {
 	// Run each action in their own routine, collect and combine results before sending.
 	klog.Infof("[%d] Full scrape...", tab.ID)
 	go tab.Screenshot(screen)
-	go tab.Pdf(pdf)
-	go tab.Content(con)
+	s := <-screen
 
-	s := <-screen // @TODO Does this actually run parallel? Or do they block each other
+	go tab.Pdf(pdf)
 	p := <-pdf
+
+	go tab.Content(con)
 	c := <-con
 
 	if s.Err != nil {

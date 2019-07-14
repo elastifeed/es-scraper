@@ -35,5 +35,4 @@ type ChromeTabReturns struct {
 // MercuryPayload is a simple struct containign data to be sent to mercury.
 type MercuryPayload struct {
 	URL  string `json:"url"`
-	HTML string `json:"html"`
 }
