@@ -22,9 +22,6 @@ LABEL maintainer="Matthias Riegler <me@xvzf.tech>"
 # Fixed port
 ENV API_BIND=":9090"
 
-# Set path
-ENV PATH $PATH:/headless-shell
-
 ENTRYPOINT ["/go/bin/es-scraper"]
 
 EXPOSE 8080

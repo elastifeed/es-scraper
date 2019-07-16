@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"sync"
 	"time"
@@ -30,11 +32,6 @@ func NewBrowserTab(id uint, mercuryURL string, store storage.Storager, parentCon
 		panic(err)
 	}
 
-	// Set metrics
-	metrics := emulation.SetDeviceMetricsOverride(1024, 1024, 1.0, true)
-	if err := chromedp.Run(ctx, metrics); err != nil {
-		panic(err)
-	}
 	klog.Infof("[%d] Tab %d started with mercury at %s", id, id, mercuryURL)
 
 	return ChromeTab{
@@ -70,12 +67,19 @@ func (tab *ChromeTab) Navigate(url string) error {
 	defer klog.Infof("[%d] Navigated to url:\t%s", tab.ID, tab.URL)
 
 	task := chromedp.ActionFunc(func(ctx context.Context) error {
-		_, _, _, err := page.Navigate(url).Do(ctx)
+		emulation.SetUserAgentOverride(userAgent).Do(ctx) // Set user agent
+		_, _, _, err := page.Navigate(url).Do(ctx)        // Navigate
 		if err != nil {
 			klog.Errorf("[%d] Navigation error. %s", tab.ID, err)
 			return err
 		}
-		return waitLoadedOrTimeout(ctx)
+		wait := waitLoadedOrTimeout(ctx)                          // Wait
+		_, _, contentSize, err := page.GetLayoutMetrics().Do(ctx) // Get the size of the website
+		if err != nil {
+			return err
+		}
+		tab.ContentSize = contentSize
+		return wait
 	})
 	return chromedp.Run(*tab.Context, task)
 }
@@ -110,22 +114,22 @@ func (tab *ChromeTab) Screenshot(ch chan ChromeTabReturns) {
 		ch <- ChromeTabReturns{nil, errors.New("Tried screenshotting empty page")}
 		return
 	}
-
 	tasks := chromedp.Tasks{
 		// Build the neccessary function(s)
+		tab.setDeviceMetricsAction(),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			klog.Infof("[%d] Taking screenshot...", tab.ID)
 			viewport := page.Viewport{
-				X:      0,
-				Y:      0,
-				Width:  1024,
-				Height: 1024,
+				X:      tab.ContentSize.X,
+				Y:      tab.ContentSize.Y,
+				Width:  tab.ContentSize.Width,
+				Height: tab.ContentSize.Height,
 				Scale:  1,
 			}
-			var err error
-			result, err = page.CaptureScreenshot().WithClip(&viewport).Do(ctx)
+			var caperr error
+			result, caperr = page.CaptureScreenshot().WithClip(&viewport).Do(ctx)
 			klog.Infof("[%d] Taking screenshot done.", tab.ID)
-			return err
+			return caperr
 		}),
 	}
 	// Run the functions
@@ -158,14 +162,15 @@ func (tab *ChromeTab) Pdf(ch chan ChromeTabReturns) {
 	}
 
 	tasks := chromedp.Tasks{
-		//chromedp.WaitReady("#document"),
 		// Use a chromedp.ActionFunc to build an executable function
+		tab.setDeviceMetricsAction(),
 		chromedp.ActionFunc(func(ctx context.Context) error { // The context is set when Run calls Do for each each Action
 			klog.Infof("[%d] Rendering pdf...", tab.ID)
 
 			var err error
-			emulation.SetEmulatedMedia("print").Do(ctx)
-			result, _, err = page.PrintToPDF().WithTransferMode(page.PrintToPDFTransferModeReturnAsBase64).Do(ctx)
+			//emulation.SetEmulatedMedia("print").Do(ctx)
+			result, _, err = page.PrintToPDF().WithPrintBackground(true).
+				WithTransferMode(page.PrintToPDFTransferModeReturnAsBase64).Do(ctx)
 			klog.Infof("[%d] Rendering pdf done.", tab.ID)
 			return err
 
@@ -197,34 +202,15 @@ func (tab *ChromeTab) Content(ch chan ChromeTabReturns) {
 		return
 	}
 
-	// Encode the data for json
-	r, w := io.Pipe()
-	defer r.Close()
-	//data := []byte(fmt.Sprintf("\"{\"url\":\"%s\", \"html\":\"%s\"}\"", tab.URL, html))
-	go func() {
-		payload := MercuryPayload{URL: tab.URL}
-		json.NewEncoder(w).Encode(&payload)
-		defer w.Close()
-	}()
-
 	// Post to the mercury api for the content
-	client := &http.Client{}
-	req, _ := http.NewRequest("POST", tab.MercuryURL, r)
-	req.Header.Set("Content-Type", "application/json")
 
 	klog.Infof("[%d] Retrieving content...", tab.ID)
-	resp, err := client.Do(req)
-	if err != nil {
-		ch <- ChromeTabReturns{nil, err}
-		return
-	}
-	defer resp.Body.Close()     // We need to close the body when we are done
-	if resp.StatusCode != 200 { // Rely on the return value of mercury to determine if a parse failed
-		ch <- ChromeTabReturns{result, errors.New("Error occured while parsing with mercury")}
-		return
-	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, posterr := postAsJSON(tab.MercuryURL, MercuryPayload{URL: tab.URL})
+	if posterr != nil {
+		ch <- ChromeTabReturns{nil, posterr}
+		return
+	}
 	json.Unmarshal(body, &result) // Unmarshal the body to work with it
 	klog.Infof("[%d] Retrieving content done.", tab.ID)
 
@@ -265,6 +251,49 @@ func (tab *ChromeTab) thumbnail(res *map[string]interface{}) (string, error) {
 	klog.Infof("[%d] Saved thumbnail to %s.", tab.ID, savePath)
 
 	return savePath, nil
+}
+
+func postAsJSON(url string, payload interface{}) ([]byte, error) {
+	// Encode the data for json through a pipe
+	var encodeErr error
+	r, w := io.Pipe()
+	defer r.Close()
+	go func() {
+		encodeErr = json.NewEncoder(w).Encode(&payload)
+		defer w.Close()
+	}()
+	if encodeErr != nil {
+		return nil, encodeErr
+	}
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", url, r)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send the request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 { // Rely on the return value of mercury to determine if a request failed annyway else
+		return nil, fmt.Errorf("POST on %s with %s returned %s", url, payload, resp.Status)
+	}
+	defer resp.Body.Close()              // We need to close the body when we are done
+	body, _ := ioutil.ReadAll(resp.Body) // Read the raw data
+	return body, nil
+}
+
+func (tab *ChromeTab) setDeviceMetricsAction() chromedp.Action {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		width, height := int64(math.Ceil(tab.ContentSize.Width)), int64(math.Ceil(tab.ContentSize.Height))
+		err := emulation.SetDeviceMetricsOverride(width, height, 1, false).
+			WithScreenOrientation(&emulation.ScreenOrientation{
+				Type:  emulation.OrientationTypePortraitPrimary,
+				Angle: 0,
+			}).Do(ctx)
+		return err
+	})
 }
 
 // Scrape runs a full scrape on a page.
